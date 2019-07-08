@@ -11,10 +11,11 @@ import org.json.JSONObject;
 
 public class History extends AppCompatActivity {
     public TextView history;
-    public TextView takeTime;
+    public TextView time;
     String id = null;
     String medicine = null;
-    String timeData = null;
+    String finish = null;
+    String create = null;
     JSONObject medicineJson;
 
     @SuppressLint("SetTextI18n")
@@ -22,22 +23,23 @@ public class History extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.history);
         history = (TextView) findViewById(R.id.text_history);
-        takeTime = (TextView) findViewById(R.id.time_history);
-        String time;
+        time = (TextView) findViewById(R.id.time_history);
 
         Intent intent = getIntent();
         String medicineData = intent.getStringExtra("medicineData");
         try {
             medicineJson = new JSONObject(medicineData);
             id = medicineJson.getString("id");
-            timeData = medicineJson.getString("updateTime");
+            finish = medicineJson.getString("finishTime");
+            create = medicineJson.getString("createTime");
             medicine = medicineJson.getString("medicine");
         } catch (JSONException e) {
             e.printStackTrace();
         }
 
         history.setText("订单号：" + id + "\n药品：" + medicine);
-        time = Medicine.timedate(timeData);
-        takeTime.setText("取药时间：" + time);
+        finish = Medicine.timedate(finish);
+        create = Medicine.timedate(create);
+        this.time.setText("取药时间：" + finish + "\n订单创建时间：" + create);
     }
 }

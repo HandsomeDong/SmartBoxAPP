@@ -29,11 +29,15 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.HashMap;
+import java.util.Map;
+
+import okhttp3.Response;
 
 @SuppressLint("Registered")
 public class Orders extends AppCompatActivity {
     String token;
-    JSONArray medicine;
+    JSONArray orders;
     LinearLayout linearLayout;
     int uiType;
 
@@ -62,51 +66,39 @@ public class Orders extends AppCompatActivity {
     }
 
 
-    protected String getResult(URL url) {
-        String result = null;
+    protected JSONArray getOrders(String url) {
+        JSONArray resultOrders = null;
         try {
-            HttpURLConnection loginRequest = (HttpURLConnection) url.openConnection();
-            loginRequest.setRequestMethod("GET");
-            loginRequest.connect();
-            InputStreamReader in = new InputStreamReader(loginRequest.getInputStream());
-            try (BufferedReader buffered = new BufferedReader(in)) {
-                result = buffered.readLine();
-            }
-        } catch (IOException e) {
+            Map<String, String> headers = new HashMap<>();
+            headers.put("token", token);
+            MyHttpClient myHttpClient = new MyHttpClient(url, "GET", headers);
+            Response response = myHttpClient.request();
+            String responseStr = response.body().string();
+            JSONObject resultJson = new JSONObject(responseStr);
+            resultOrders = resultJson.getJSONArray("orders");
+        } catch (IOException | JSONException e) {
             e.printStackTrace();
         }
-        return result;
+        return resultOrders;
     }
 
     Runnable getOrders = new Runnable() {
         @Override
         public void run() {
-            String result;
-            JSONObject medicineJson;
-            int error = 0;
             Message m = handler.obtainMessage();
-            try {
-                URL url;
-                if (uiType == 1) {
-                    url = new URL("http://119.29.247.25/smartbox/history?token=" + token);
-                } else {
-                    url = new URL("http://119.29.247.25/smartbox/medicine?token=" + token);
-                }
-
-                result = getResult(url);
-                medicineJson = new JSONObject(result);
-                error = medicineJson.getInt("error");
-                if (error == 0) {
-                    medicine = medicineJson.getJSONArray("data");
-                    m.what = 0;
-                } else {
-                    m.what = 1;
-                }
-
-                handler.sendMessage(m);
-            } catch (MalformedURLException | JSONException e) {
-                e.printStackTrace();
+            String url;
+            if (uiType == 1) {
+                url = "http://119.29.247.25/smartbox/order/history";
+            } else {
+                url = "http://119.29.247.25/smartbox/order/medicine";
             }
+            orders = getOrders(url);
+            if (orders.length() > 0) {
+                m.what = 0;
+            } else {
+                m.what = 1;
+            }
+            handler.sendMessage(m);
         }
     };
 
@@ -114,7 +106,7 @@ public class Orders extends AppCompatActivity {
     public Handler handler = new Handler() {
         public void handleMessage(Message msg) {
             if (msg.what == 0) {
-                addItems(medicine);
+                addItems(orders);
             } else {
                 noItem();
             }

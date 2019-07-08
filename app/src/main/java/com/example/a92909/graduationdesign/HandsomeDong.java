@@ -26,6 +26,11 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.ProtocolException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
+
+import okhttp3.Response;
 
 public class HandsomeDong extends AppCompatActivity {
     private EditText accountEdit;
@@ -97,8 +102,8 @@ public class HandsomeDong extends AppCompatActivity {
         });
     }
 
-    public boolean onKeyDown(int keyCode,KeyEvent event){
-        if(keyCode==KeyEvent.KEYCODE_BACK){
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
             if ((System.currentTimeMillis() - mExitTime) > 2000) {
                 //大于2000ms则认为是误操作，使用Toast进行提示
                 Toast.makeText(this, "再按一次退出程序", Toast.LENGTH_SHORT).show();
@@ -146,36 +151,31 @@ public class HandsomeDong extends AppCompatActivity {
     Runnable checkUserInfo = new Runnable() {
         @Override
         public void run() {
+            String token;
+            int status = 2;
             accountEdit = (EditText) findViewById(R.id.edit_account);
             passwordEdit = (EditText) findViewById(R.id.edit_passwd);
             String userId = accountEdit.getText().toString();
-            String passWord = passwordEdit.getText().toString();
-            URL url;
-            int status = 3;
-            String result;
-            String token;
-
+            String password = passwordEdit.getText().toString();
             if (accountEdit.length() > 0 && passwordEdit.length() > 0) {
                 try {
-                    url = new URL("http://119.29.247.25/smartbox/login?userId=" + userId + "&password=" + passWord);
-                    HttpURLConnection loginRequest = (HttpURLConnection) url.openConnection();
-                    loginRequest.setRequestMethod("GET");
-                    loginRequest.connect();
-                    InputStreamReader in = new InputStreamReader(loginRequest.getInputStream());
-                    try (BufferedReader buffered = new BufferedReader(in)) {
-                        result = buffered.readLine();
-                        JSONObject resultJson = new JSONObject(result);
-                        status = resultJson.getInt("status");
-                        token = resultJson.getString("token");
-                        saveToken(token);
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                    }
-                } catch (IOException e) {
+                    String url = "http://119.29.247.25/smartbox/user/login";
+                    MyHttpClient myHttpClient = new MyHttpClient(url, "POST");
+                    Map<String, Object> params = new HashMap<>();
+                    params.put("id", userId);
+                    params.put("password", password);
+                    myHttpClient.setParams(params);
+                    Response response = myHttpClient.request();
+                    String responseStr = response.body().string();
+                    JSONObject resultJson = new JSONObject(responseStr);
+                    status = resultJson.getInt("status");
+                    token = resultJson.getString("token");
+                    saveToken(token);
+                } catch (IOException | JSONException e) {
                     e.printStackTrace();
                 }
                 Message m1 = handler2.obtainMessage();
-                if (status == 0)//登录失败
+                if (status == -1)//登录失败
                 {
                     m1.what = 1;
                     handler2.sendMessage(m1);
@@ -188,10 +188,56 @@ public class HandsomeDong extends AppCompatActivity {
                     m1.what = 3;
                     handler2.sendMessage(m1);
                 }
+
             } else {
                 Message m = handler3.obtainMessage();
                 handler3.sendMessage(m);
             }
+
+
+//            URL url;
+//            int status = 3;
+//            String result;
+//            String token;
+//
+//            if (accountEdit.length() > 0 && passwordEdit.length() > 0) {
+//                try {
+//                    url = new URL("http://119.29.247.25/smartbox/login?userId=" + userId + "&password=" + passWord);
+//                    HttpURLConnection loginRequest = (HttpURLConnection) url.openConnection();
+//                    loginRequest.setRequestMethod("GET");
+//                    loginRequest.connect();
+//                    InputStreamReader in = new InputStreamReader(loginRequest.getInputStream());
+//                    try (BufferedReader buffered = new BufferedReader(in)) {
+//                        result = buffered.readLine();
+//                        JSONObject resultJson = new JSONObject(result);
+//                        status = resultJson.getInt("status");
+//                        token = resultJson.getString("token");
+//                        saveToken(token);
+//                    } catch (JSONException e) {
+//                        e.printStackTrace();
+//                    }
+//                } catch (IOException e) {
+//                    e.printStackTrace();
+//                }
+//                Message m1 = handler2.obtainMessage();
+//                if (status == 0)//登录失败
+//                {
+//                    m1.what = 1;
+//                    handler2.sendMessage(m1);
+//                } else if (status == 1) {//登录成功
+//                    Intent go_Me = new Intent(HandsomeDong.this, Me.class);
+//                    startActivity(go_Me);
+//                    m1.what = 2;
+//                    handler2.sendMessage(m1);
+//                } else {//其他情况：联网失败，服务器异常等
+//                    m1.what = 3;
+//                    handler2.sendMessage(m1);
+//                }
+//            } else {
+//                Message m = handler3.obtainMessage();
+//                handler3.sendMessage(m);
+//            }
+
         }
     };
 

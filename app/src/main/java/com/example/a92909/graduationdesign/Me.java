@@ -14,16 +14,14 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.ProtocolException;
-import java.net.URL;
+import java.util.HashMap;
+import java.util.Map;
+
+import okhttp3.Response;
 
 /**
  * Created by 92909 on 2018/11/2.
@@ -120,37 +118,26 @@ public class Me extends AppCompatActivity {
     Runnable checkUserInfo = new Runnable() {
         @Override
         public void run() {
-            URL url;
-            int status = 3;
-            String result;
+            int status = 2;
             SharedPreferences sp = getSharedPreferences("token", Context.MODE_PRIVATE);
             String token = sp.getString("token", "");
             try {
-                url = new URL("http://119.29.247.25/smartbox/user?token=" + token);
-                HttpURLConnection loginRequest = (HttpURLConnection) url.openConnection();
-                loginRequest.setRequestMethod("GET");
-                loginRequest.connect();
-
-                InputStreamReader in = new InputStreamReader(loginRequest.getInputStream());
-                try (BufferedReader buffered = new BufferedReader(in)) {
-                    result = buffered.readLine();
-                    JSONObject resultJson = new JSONObject(result);
-                    status = resultJson.getInt("status");
-                    JSONObject userDataJson = resultJson.getJSONObject("userData");
-                    userName = userDataJson.getString("userName");
-                    userId = userDataJson.getString("userId");
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-            } catch (MalformedURLException e) {
-                e.printStackTrace();
-            } catch (ProtocolException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
+                Map<String, String> headers = new HashMap<>();
+                headers.put("token", token);
+                String url = "http://119.29.247.25/smartbox/user/data";
+                MyHttpClient myHttpClient = new MyHttpClient(url, "GET", headers);
+                Response response = myHttpClient.request();
+                String responseStr = response.body().string();
+                JSONObject resultJson = new JSONObject(responseStr);
+                status = resultJson.getInt("status");
+                JSONObject userData = resultJson.getJSONObject("userData");
+                userId = userData.getString("id");
+                userName = userData.getString("name");
+            } catch (IOException | JSONException e) {
                 e.printStackTrace();
             }
             Message m1 = handler1.obtainMessage();
-            if (status == 0)//登录失败
+            if (status == -1)//登录失败
             {
                 m1.what = 1;
                 handler1.sendMessage(m1);
@@ -167,30 +154,23 @@ public class Me extends AppCompatActivity {
     Runnable checkMedicine = new Runnable() {
         @Override
         public void run() {
-            URL url;
-            int error = 0;
-            String result;
+            JSONArray medicineArr = null;
             SharedPreferences sp = getSharedPreferences("token", Context.MODE_PRIVATE);
             String token = sp.getString("token", "");
             try {
-                url = new URL("http://119.29.247.25/smartbox/medicine?token=" + token);
-                HttpURLConnection loginRequest = (HttpURLConnection) url.openConnection();
-                loginRequest.setRequestMethod("GET");
-                loginRequest.connect();
-
-                InputStreamReader in = new InputStreamReader(loginRequest.getInputStream());
-                try (BufferedReader buffered = new BufferedReader(in)) {
-                    result = buffered.readLine();
-                    JSONObject medicineJson = new JSONObject(result);
-                    error = medicineJson.getInt("error");
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-            } catch (IOException e) {
+                Map<String, String> headers = new HashMap<>();
+                headers.put("token", token);
+                String url = "http://119.29.247.25/smartbox/order/medicine";
+                MyHttpClient myHttpClient = new MyHttpClient(url, "GET", headers);
+                Response response = myHttpClient.request();
+                String responseStr = response.body().string();
+                JSONObject resultJson = new JSONObject(responseStr);
+                medicineArr = resultJson.getJSONArray("orders");
+            } catch (IOException | JSONException e) {
                 e.printStackTrace();
             }
             Message m1 = handler2.obtainMessage();
-            if (error == 0) {
+            if (medicineArr.length() > 0) {
                 m1.what = 1;
             } else {
                 m1.what = 2;
