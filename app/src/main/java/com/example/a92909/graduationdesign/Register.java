@@ -13,15 +13,12 @@ import android.widget.Toast;
 
 import org.json.JSONException;
 import org.json.JSONObject;
-
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.ProtocolException;
-import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.regex.Pattern;
+import okhttp3.Response;
 
 public class Register extends AppCompatActivity {
 
@@ -61,42 +58,38 @@ public class Register extends AppCompatActivity {
     Runnable sendVerification = new Runnable() {
         @Override
         public void run() {
-            String phoneNumber = phoneEdit.getText().toString();
-            URL url;
             int status = 2;
-            String result;
             Message m1 = handler1.obtainMessage();
+            String phoneNumber = phoneEdit.getText().toString();
             if (phoneNumber.length() == 11 && isInteger(phoneNumber)) {
                 try {
-                    url = new URL("http://119.29.247.25/smartbox/sendverification?phoneNumber=" + phoneNumber);
-                    HttpURLConnection loginRequest = (HttpURLConnection) url.openConnection();
-                    loginRequest.setRequestMethod("GET");
-                    loginRequest.connect();
-                    InputStreamReader in = new InputStreamReader(loginRequest.getInputStream());
-                    try (BufferedReader buffered = new BufferedReader(in)) {
-                        result = buffered.readLine();
-                        JSONObject resultJson = new JSONObject(result);
-                        status = resultJson.getInt("status");
-                    } catch (JSONException e) {
-                        e.printStackTrace();
+                    String url = "http://119.29.247.25/smartbox/register/send";
+                    MyHttpClient myHttpClient = new MyHttpClient(url, "GET");
+                    Map<String, Object> params = new HashMap<>();
+                    params.put("phoneNumber", phoneNumber);
+                    myHttpClient.setParams(params);
+                    Response response = myHttpClient.request();
+                    String responseStr = response.body().string();
+                    JSONObject resultJson = new JSONObject(responseStr);
+                    status = resultJson.getInt("status");
+                    if (status == 1)//发送成功
+                    {
+                        m1.what = 1;
+                        handler1.sendMessage(m1);
+                    } else if (status == 0) {//发送失败
+                        m1.what = 2;
+                        handler1.sendMessage(m1);
+                    } else if (status == -1) {//发送账号已注册
+                        m1.what = 3;
+                        handler1.sendMessage(m1);
+                    } else {//其他情况：联网失败，服务器异常等
+                        m1.what = 4;
+                        handler1.sendMessage(m1);
                     }
-                } catch (IOException e) {
+                } catch (IOException | JSONException e) {
                     e.printStackTrace();
                 }
-                if (status == 1)//发送成功
-                {
-                    m1.what = 1;
-                    handler1.sendMessage(m1);
-                } else if (status == 0) {//发送失败
-                    m1.what = 2;
-                    handler1.sendMessage(m1);
-                } else if (status == -1) {//发送账号存在
-                    m1.what = 3;
-                    handler1.sendMessage(m1);
-                } else {//其他情况：联网失败，服务器异常等
-                    m1.what = 4;
-                    handler1.sendMessage(m1);
-                }
+
             } else {
                 m1.what = 5;
                 handler1.sendMessage(m1);
@@ -107,45 +100,43 @@ public class Register extends AppCompatActivity {
     Runnable sendRegister = new Runnable() {
         @Override
         public void run() {
+            int status = 2;
+            Message m2 = handler2.obtainMessage();
             String phoneNumber = phoneEdit.getText().toString();
             String verification = verificationEdit.getText().toString();
             String userName = userNameEdit.getText().toString();
             String password = passwordEdit.getText().toString();
-            URL url;
-            int status = 2;
-            String result;
-            Message m2 = handler2.obtainMessage();
             if (phoneNumber.length() == 11 && isInteger(phoneNumber) && verification.length() > 0 && userName.length() > 0 && password.length() > 0) {
                 try {
-                    url = new URL("http://119.29.247.25/smartbox/register?phoneNumber=" + phoneNumber + "&verification=" + verification
-                            + "&userName=" + userName + "&password=" + password);
-                    HttpURLConnection loginRequest = (HttpURLConnection) url.openConnection();
-                    loginRequest.setRequestMethod("GET");
-                    loginRequest.connect();
-                    InputStreamReader in = new InputStreamReader(loginRequest.getInputStream());
-                    try (BufferedReader buffered = new BufferedReader(in)) {
-                        result = buffered.readLine();
-                        JSONObject resultJson = new JSONObject(result);
-                        status = resultJson.getInt("status");
-                    } catch (JSONException e) {
-                        e.printStackTrace();
+                    String url = "http://119.29.247.25/smartbox/register/register";
+                    MyHttpClient myHttpClient = new MyHttpClient(url, "POST");
+                    Map<String, Object> params = new HashMap<>();
+                    params.put("id", phoneNumber);
+                    params.put("password", password);
+                    params.put("name", new String(userName.getBytes(), StandardCharsets.UTF_8));
+                    params.put("verification", Integer.valueOf(verification));
+
+                    myHttpClient.setParams(params);
+                    Response response = myHttpClient.request();
+                    String responseStr = response.body().string();
+                    JSONObject resultJson = new JSONObject(responseStr);
+                    status = resultJson.getInt("status");
+                    if (status == 1)//注册成功
+                    {
+                        m2.what = 1;
+                        handler2.sendMessage(m2);
+                    } else if (status == 0) {//注册失败
+                        m2.what = 2;
+                        handler2.sendMessage(m2);
+                    } else if (status == -1) {//验证码错误
+                        m2.what = 3;
+                        handler2.sendMessage(m2);
+                    } else {//其他情况：联网失败，服务器异常等
+                        m2.what = 4;
+                        handler2.sendMessage(m2);
                     }
-                } catch (IOException e) {
+                } catch (IOException | JSONException e) {
                     e.printStackTrace();
-                }
-                if (status == 1)//注册成功
-                {
-                    m2.what = 1;
-                    handler2.sendMessage(m2);
-                } else if (status == 0) {//注册失败
-                    m2.what = 2;
-                    handler2.sendMessage(m2);
-                } else if (status == -1) {//验证码错误
-                    m2.what = 3;
-                    handler2.sendMessage(m2);
-                } else {//其他情况：联网失败，服务器异常等
-                    m2.what = 4;
-                    handler2.sendMessage(m2);
                 }
             } else {
                 m2.what = 5;
@@ -207,6 +198,4 @@ public class Register extends AppCompatActivity {
         Pattern pattern = Pattern.compile("^[-\\+]?[\\d]*$");
         return pattern.matcher(str).matches();
     }
-
-
 }
