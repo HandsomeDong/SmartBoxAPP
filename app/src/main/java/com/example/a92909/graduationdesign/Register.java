@@ -114,7 +114,7 @@ public class Register extends AppCompatActivity {
                     params.put("id", phoneNumber);
                     params.put("password", password);
                     params.put("name", new String(userName.getBytes(), StandardCharsets.UTF_8));
-                    params.put("verification", Integer.valueOf(verification));
+                    params.put("verification", verification);
 
                     myHttpClient.setParams(params);
                     Response response = myHttpClient.request();
